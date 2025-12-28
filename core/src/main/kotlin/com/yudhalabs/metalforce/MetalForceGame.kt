@@ -1,9 +1,8 @@
 package com.yudhalabs.metalforce
 
 import com.badlogic.gdx.Game
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.yudhalabs.metalforce.screens.GameScreen
+import com.yudhalabs.metalforce.screens.MainMenuScreen
 import com.yudhalabs.metalforce.utils.Assets
 
 class MetalForceGame : Game() {
@@ -14,7 +13,7 @@ class MetalForceGame : Game() {
         batch = SpriteBatch()
         assets = Assets()
         assets.load()
-        setScreen(GameScreen(this))
+        setScreen(MainMenuScreen(this))
     }
 
     override fun dispose() {

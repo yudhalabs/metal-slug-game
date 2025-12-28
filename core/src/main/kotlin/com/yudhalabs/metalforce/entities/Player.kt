@@ -15,12 +15,18 @@ class Player(private val assets: Assets) {
     var isJumping = false
     var isShooting = false
     var health = 100
+    var maxHealth = 100
     var isAlive = true
+    var bombs = 3
+
+    // Weapon system
+    val weapon = Weapon(WeaponType.PISTOL, assets)
 
     private var stateTime = 0f
-    private var shootCooldown = 0f
     private var animFrame = 0
     private var animTimer = 0f
+    private var invincibleTimer = 0f
+    private var flashTimer = 0f
 
     companion object {
         const val WIDTH = 64f
@@ -29,12 +35,18 @@ class Player(private val assets: Assets) {
         const val SPEED = 200f
         const val JUMP_VELOCITY = 450f
         const val GRAVITY = -800f
-        const val SHOOT_COOLDOWN = 0.15f
+        const val INVINCIBLE_TIME = 1.5f
     }
 
     fun update(delta: Float) {
         stateTime += delta
-        shootCooldown -= delta
+        weapon.update(delta)
+
+        // Invincibility after taking damage
+        if (invincibleTimer > 0) {
+            invincibleTimer -= delta
+            flashTimer += delta
+        }
 
         // Apply gravity
         velocity.y += GRAVITY * delta
@@ -78,29 +90,65 @@ class Player(private val assets: Assets) {
         }
     }
 
-    fun shoot(): Bullet? {
-        if (shootCooldown <= 0) {
-            shootCooldown = SHOOT_COOLDOWN
+    fun shoot(): List<Bullet> {
+        if (weapon.canShoot()) {
             isShooting = true
-            val bulletX = if (facingRight) position.x + WIDTH else position.x - 8
+            val bulletX = if (facingRight) position.x + WIDTH else position.x
             val bulletY = position.y + HEIGHT / 2
-            return Bullet(bulletX, bulletY, facingRight, false, assets)
+            return weapon.shoot(bulletX, bulletY, facingRight)
         }
-        return null
+        return emptyList()
     }
 
     fun takeDamage(amount: Int) {
+        if (invincibleTimer > 0) return
+
         health -= amount
+        invincibleTimer = INVINCIBLE_TIME
+
         if (health <= 0) {
             health = 0
             isAlive = false
         }
     }
 
+    fun heal(amount: Int) {
+        health = (health + amount).coerceAtMost(maxHealth)
+    }
+
+    fun pickupWeapon(type: WeaponType) {
+        weapon.pickupWeapon(type)
+    }
+
+    fun addAmmo(amount: Int) {
+        if (weapon.type != WeaponType.PISTOL) {
+            weapon.ammo += amount
+        }
+    }
+
+    fun useBomb(): Boolean {
+        if (bombs > 0) {
+            bombs--
+            return true
+        }
+        return false
+    }
+
+    fun addBomb() {
+        bombs++
+    }
+
+    fun isInvincible(): Boolean = invincibleTimer > 0
+
     fun render(batch: SpriteBatch) {
+        // Flash when invincible
+        if (invincibleTimer > 0 && (flashTimer * 10).toInt() % 2 == 0) {
+            return
+        }
+
         val texture: TextureRegion = when {
             isJumping -> assets.playerJump
-            isShooting && shootCooldown > SHOOT_COOLDOWN - 0.05f -> assets.playerShoot
+            isShooting && weapon.cooldown > weapon.getStats().fireRate - 0.05f -> assets.playerShoot
             kotlin.math.abs(velocity.x) > 10f -> assets.playerRun[animFrame % assets.playerRun.size]
             else -> assets.playerIdle[animFrame % assets.playerIdle.size]
         }
@@ -112,5 +160,31 @@ class Player(private val assets: Assets) {
         } else {
             batch.draw(texture, position.x + WIDTH, position.y, -WIDTH, HEIGHT)
         }
+    }
+
+    fun reset() {
+        position.set(100f, GROUND_Y)
+        velocity.set(0f, 0f)
+        health = maxHealth
+        isAlive = true
+        isJumping = false
+        isShooting = false
+        facingRight = true
+        bombs = 3
+        weapon.type = WeaponType.PISTOL
+        weapon.ammo = -1
+        invincibleTimer = 0f
+    }
+
+    fun getWeaponName(): String = when (weapon.type) {
+        WeaponType.PISTOL -> "PISTOL"
+        WeaponType.HEAVY_MG -> "HEAVY MG"
+        WeaponType.SHOTGUN -> "SHOTGUN"
+        WeaponType.ROCKET -> "ROCKET"
+        WeaponType.FLAME -> "FLAME"
+    }
+
+    fun getAmmoDisplay(): String {
+        return if (weapon.type == WeaponType.PISTOL) "∞" else "${weapon.ammo}"
     }
 }
