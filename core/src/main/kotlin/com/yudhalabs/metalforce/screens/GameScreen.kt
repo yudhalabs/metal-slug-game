@@ -79,8 +79,8 @@ class GameScreen(private val game: MetalForceGame) : Screen {
         bossSpawned = false
         stageProgress = 0f
         enemiesKilled = 0
-        showingStageIntro = true
-        stageIntroTimer = 0f
+        spawnTimer = 0f
+        pickupTimer = 0f
 
         // Spawn initial enemies based on stage
         spawnEnemies(2 + currentStage)
@@ -215,6 +215,7 @@ class GameScreen(private val game: MetalForceGame) : Screen {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.15f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
+        uiCamera.update()
         game.batch.projectionMatrix = uiCamera.combined
         game.batch.begin()
 
@@ -497,6 +498,8 @@ class GameScreen(private val game: MetalForceGame) : Screen {
     }
 
     private fun drawUI() {
+        uiCamera.update()
+
         // Draw touch buttons
         shapeRenderer.projectionMatrix = uiCamera.combined
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
